@@ -1,4 +1,4 @@
-# Vitamin-V
+# COSSIM-V
 This is the COSSIM [1] extension which is developed to simulate complete HPC and/or Cloud applications, supporting both the RISC-V Vector (RVV) and Cryptographic extensions, in a fully distributed manner. 
 
 ## The contribution of this work can be summarized in the following points:
