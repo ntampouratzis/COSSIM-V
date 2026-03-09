@@ -15,8 +15,8 @@ sudo apt install openjdk-8-jdk openjdk-8-jre tcl-dev tk-dev qt4-qmake libqt4-dev
 
 #Manual Installation
 cd $HOME
-git clone https://github.com/ntampouratzis/Vitamin-V.git
-mv -f $HOME/Vitamin-V $HOME/COSSIM
+git clone https://github.com/ntampouratzis/COSSIM-V.git
+mv -f $HOME/COSSIM-V $HOME/COSSIM
 
 ##cCERTI & Our SynchServer Installation
 cd $HOME/COSSIM/cCERTI
