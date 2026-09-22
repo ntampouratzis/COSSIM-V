@@ -46,7 +46,7 @@ make -j
 
 ## Execution ##
 
-You can execute the HPCG using:
+You can execute the HPCG using the following:
 
 ```
 cd benchmarks/HPCG_rvv/
