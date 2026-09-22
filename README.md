@@ -1,8 +1,9 @@
 # COSSIM-V
-This is the COSSIM [1] extension which is developed to simulate complete HPC and/or Cloud applications, supporting both the RISC-V Vector (RVV) and Cryptographic extensions, in a fully distributed manner. 
+This is the COSSIM [1] extension which is developed to simulate complete HPC and/or Cloud applications, supporting both the RISC-V Vector (RVV) and Cryptographic extensions, in a fully distributed manner. In addition, we introduce an innovative dynamic synchronization mechanism. This novel scheme adjusts synchronization intervals directly from within the simulated operating system, significantly optimizing overall simulation performance by enforcing tight synchronization strictly when required. 
 
 ## The contribution of this work can be summarized in the following points:
 - Development of an open-source multi-node integrated simulation framework which can simulate complete RISC-V Systems supporting modern RISC-V extensions.
+- Development of a novel dynamic synchronization scheme that dynamically adapts the synchronization intervals directly from within the simulated OS, optimizing simulation performance by enforcing tight synchronization only when required.
 - An innovative flow to enable the designers to simulate the complete aspects of RISC-V Systems (i.e. CPU and Network Environment) through real applications within one simulation framework.
 - An open-source GitHub repository that includes an RVV1.0-enabled HPCG benchmark, dot product and sparse matrix-vector multiplication (SpMV) algorithms, as well as a RISC-V Crypto benchmark for execution on both simulated and physical RISC-V CPUs.
 - The integration of VEF traces Framework [2] to analyze communication traffic of MPI-based applications and generate traces that can be used to feed other network simulators.
