@@ -154,7 +154,7 @@ HLA_OMNET::HLAInitialization(std::string federation, std::string fedfile, bool s
 
       //! Execute the Gem5.sh !//
       char* pPath = getenv ("GEM5");
-      char scriptName[13] = "run_llama.sh"; //8 for run.sh
+      char scriptName[12] = "run_test.sh"; //8 for run.sh
       char * result = (char *) malloc(1 + strlen(pPath)+ strlen(scriptName) );
       strcpy(result, pPath);
       strcat(result, "/");
@@ -940,3 +940,70 @@ HLA_OMNET::RequestFunction(HLAInitializationRequest rqst){
   return ret;
 }
 //! --- END CERTI INITIALIZATION IP --- !//
+
+//! --- Start Synch INITIALIZATION IP --- !//
+HLAStartSyncRequest HLA_OMNET::RequestFunction2(HLAStartSyncRequests rqst){
+  int sockfd = 0, n = 0;
+  HLAStartSyncRequest ret;
+
+  ret.synch_enable = false;
+  ret.start_time   = 0;
+  ret.synch_time   = 0;
+
+  struct sockaddr_in serv_addr;
+
+  if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  {
+      printf("\n Error : Could not create socket \n");
+      exit(-1);
+  }
+
+  memset(&serv_addr, '0', sizeof(serv_addr));
+
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(60404);
+
+  char* pPath = getenv ("CERTI_HOST");
+  if (pPath==NULL)
+    pPath = (char *) "127.0.0.1";
+
+  if(inet_pton(AF_INET, pPath, &serv_addr.sin_addr)<=0)
+  {
+      printf("\n inet_pton error occured\n");
+      exit(-1);
+  }
+
+  if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+  {
+     if(!FirstConnectionWithHLAInitialization){
+       printf("\n Error : Connection with Start Synch Initialization Server (IP:%s) Failed \n",pPath);
+       exit(-1);
+     }
+     else{
+       printf("\n Warning : Connection with Start Synch Initialization Server (IP:%s) Failed.. Retry in 30 secs\n",pPath);
+       sleep(30);
+       return RequestFunction2(rqst);
+     }
+  }
+  else{
+    FirstConnectionWithHLAInitialization = true;
+  }
+
+  n = write(sockfd, (const void *) &rqst, sizeof(rqst));
+
+  n = read(sockfd, (void *) &ret, sizeof(HLAStartSyncRequest));
+  if(n < 0)
+    printf("\n Reply error \n");
+
+  close(sockfd);
+  //! Set the appropriate delay if the server is in localhost or not !//
+  if((strcmp(pPath,(char *)"127.0.0.1")!=0)&&((rqst.type == READ)||(rqst.type == READ_GLOBAL))){
+    usleep(200000);
+  }
+  else{
+    usleep(10000);
+  }
+  return ret;
+}
+//! --- END Start Synch INITIALIZATION IP --- !//
+

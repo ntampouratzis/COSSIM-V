@@ -54,6 +54,15 @@ typedef struct HLAInitializationRequests{
 }HLAInitializationRequest;
 //! --- END CERTI INITIALIZATION IP --- !//
 
+/* COSSIM-V */
+typedef struct HLAStartSyncRequests{
+ int type;
+ bool synch_enable;
+ double start_time; //get the curTick from gem5
+ uint64_t synch_time; //m5 start_sync argument
+}HLAStartSyncRequest;
+/* END COSSIM-V */
+
 
 /*
  * Reference counted class containing ethernet packet data (ANGELOS: GET this for QEMU!)
@@ -123,6 +132,10 @@ public:
     bool RequestFunction(HLAInitializationRequest rqst);
     bool FirstConnectionWithHLAInitialization;
     //! --- END CERTI INITIALIZATION IP --- !//
+
+    //! --- Start Synch INITIALIZATION IP --- !//
+    HLAStartSyncRequest RequestFunction2(HLAStartSyncRequests rqst);
+    //! --- END Start Synch INITIALIZATION IP --- !//
 
     unsigned long ID ; // object handle
     

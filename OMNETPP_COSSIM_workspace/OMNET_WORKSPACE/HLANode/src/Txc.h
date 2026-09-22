@@ -13,6 +13,8 @@
 //#define DEBUG_MSG
 //#define NO_HLA
 
+#define START_SYNC_ENABLE
+
 #include <typeinfo>
 #include <omnetpp.h>
 
@@ -73,6 +75,12 @@ public:
   int NODE_NO;
 
   double SYNCH_TIME;
+
+  /* COSSIM-V */
+  bool start_synch;
+  HLAStartSyncRequest synch_req;
+  uint64_t count_steps;
+  /* END COSSIM-V */
 
   string federate = "SYNCH_OMNET" ;
 
@@ -170,6 +178,9 @@ private:
     unsigned char my_Header_Checksum[2]; //25-26
     int my_source_ip[4];//27-30
     int my_dest_ip[4];//31-34
+
+    HLANode::SyncNode *syncNodePtr; //COSSIM-V
+    bool first_time; //COSSIM-V
 
 };
 

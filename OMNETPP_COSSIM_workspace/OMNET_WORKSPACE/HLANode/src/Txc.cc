@@ -64,6 +64,8 @@ void SyncNode::initialize(void) {
     NUMBER_OF_HLA_NODES = (int)par("NumberOfHLANodes");
     SYNCH_TIME          = (double)par("SynchTime");
 
+    start_synch = false; //COSSIM-V
+
     cMessage* event = new myPacket("reloop");
     scheduleAt(simTime()+SYNCH_TIME, event);
 
@@ -102,10 +104,43 @@ void SyncNode::handleMessage(cMessage *msg){
     }
     else{
         cMessage* event = new cMessage("syncstep");
-        scheduleAt(simTime()+SYNCH_TIME, event);
         if (msg->isSelfMessage()) {
             HLAGlobalSynch->step();
         }
+        // All gem5 nodes have called the m5 start_sync in this point!
+#ifdef START_SYNC_ENABLE
+        if (!start_synch){
+            // Read the start_time from SynchServer
+            while(1){
+                HLAStartSyncRequest tmp;
+                tmp.type = READ;
+                synch_req = HLAGlobalSynch->RequestFunction2(tmp);
+                //cout <<"\n--------------------"<<"For NODE:"<<NODE_NO<< " synch_enable:"<< ret2.synch_enable <<"\n";
+                  if(synch_req.synch_enable){ break;}
+            }
+            //cout <<"\n--------------------"<<"For NODE:"<<NODE_NO<< " start_sync:"<< ret2.start_time <<"\n";
+            scheduleAt(simTime()+synch_req.start_time, event);
+            SYNCH_TIME = (double)synch_req.synch_time/(double)1000000000000; //convert to seconds
+            start_synch = true;
+        }
+        else{
+
+            if (count_steps > (100000000000/synch_req.synch_time)){ // It reads every 0.1 seconds
+              HLAStartSyncRequest tmp;
+              tmp.type = READ;
+              tmp = HLAGlobalSynch->RequestFunction2(tmp);
+              SYNCH_TIME = (double)tmp.synch_time/(double)1000000000000; //convert to seconds
+              synch_req.synch_time = tmp.synch_time;
+
+              count_steps = 0;
+            }
+            count_steps++;
+
+            scheduleAt(simTime()+SYNCH_TIME, event);
+        }
+#else
+        scheduleAt(simTime()+SYNCH_TIME, event);
+#endif
     }
 #endif
 }
@@ -192,6 +227,20 @@ void Txc0::initialize()
     char str[20];
     total_bytes_sent=0;
     total_bytes_received=0;
+
+    /* COSSIM -V */
+    cModule *module = getParentModule()->getSubmodule("syncnode");
+
+    if (module != nullptr) {
+        syncNodePtr = check_and_cast<HLANode::SyncNode *>(module);
+    }
+    else{
+        error("Module SyncNode is not found in the .ned file!");
+    }
+
+    first_time = false;
+    /* END COSSIM -V */
+
     NODE_NO = (int)par("nodeNo");
     RX_PACKET_TIME = (double)par("RXPacketTime");
     sprintf(str, "Txc%dreloop", NODE_NO);
@@ -256,7 +305,27 @@ void Txc0::handleMessage(cMessage *msg)
 
      if (msg->isSelfMessage()) {
          cMessage* event = new cMessage("reloop");
-         scheduleAt(simTime()+RX_PACKET_TIME, event);
+
+
+#ifdef START_SYNC_ENABLE
+        if (!syncNodePtr->start_synch){
+            scheduleAt(simTime(), event);
+            first_time = false;
+        }
+        else{
+            if(!first_time){
+                scheduleAt(simTime()+syncNodePtr->synch_req.start_time, event);
+                first_time = true;
+            }
+            else{
+                RX_PACKET_TIME = syncNodePtr->SYNCH_TIME;
+                scheduleAt(simTime()+RX_PACKET_TIME, event);
+            }
+        }
+#else
+        scheduleAt(simTime()+RX_PACKET_TIME, event);
+#endif
+
 
          //---------------Receive packet from GeM5--------------------------
 #ifdef NO_HLA
