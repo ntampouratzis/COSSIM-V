@@ -85,10 +85,15 @@ using std::string ;
 using std::cout ;
 using std::endl ;
 
+static COSSIMEtherLink* global_cossim_link = nullptr; //COSSIM-V
+
 
 COSSIMEtherLink::COSSIMEtherLink(const Params &p)
     : SimObject(p), nodeNumber(p.nodeNum), TotalNodes(p.TotalNodes)
 {
+
+    global_cossim_link = this; //COSSIM-V
+
     TimeConversion(p); 
     
     link = new Link(name() + ".link", this, 0, p.speed, p.delay, p.delay_var, p.dump);
@@ -136,6 +141,14 @@ COSSIMEtherLink::COSSIMEtherLink(const Params &p)
       NodeHLA->RequestFunction(tmp);
 
     }
+
+#ifdef START_SYNC_ENABLE
+      /* COSSIM-V */
+      HLAStartSyncRequest tmp;
+      tmp.type = CREATE;
+      NodeHLA->RequestFunction2(tmp);
+      /* END COSSIM-V */
+#endif
     
     // Register a callback to compensate for the destructor not
     // being called. The callback forces to close the HLA Connection
@@ -193,13 +206,17 @@ COSSIMEtherLink::Link::Link(const std::string &name, COSSIMEtherLink *p, int num
       RxdoneEvent([this]{ rxDone(); }, name), 
       synchEvent([this]{ Synch(); }, name)
 { 
-    
-    if (!synchEvent.scheduled())
-        parent->schedule(synchEvent, curTick() + parent->SynchTimeTicks);
-  
-    if (!RxdoneEvent.scheduled())
+
+#ifndef START_SYNC_ENABLE
+     if (!synchEvent.scheduled())
+         parent->schedule(synchEvent, curTick() + parent->SynchTimeTicks);
+
+     if (!RxdoneEvent.scheduled())
         parent->schedule(RxdoneEvent, curTick() + parent->ReceivePacketTicks);
-    
+#else
+    count_steps = 0;
+#endif
+
 }
 
 void
@@ -207,7 +224,23 @@ COSSIMEtherLink::Link::Synch()
 {
   
   parent->HLAGlobalSynch->step(); //! GLOBAL SYNCHRONIZATION !//
+
+#ifdef START_SYNC_ENABLE
+  if (count_steps > (100000000000/parent->SynchTimeTicks)){ // It reads every 0.1 seconds
+    HLAStartSyncRequest tmp;
+    tmp.type = READ;
+    tmp = parent->NodeHLA->RequestFunction2(tmp);
+    parent->SynchTimeTicks = tmp.synch_time;
+    parent->ReceivePacketTicks = parent->SynchTimeTicks;
+
+    //std::cout << "[COSSIMEtherLink::Link::Synch] curTick(): "<< curTick() << " parent->SynchTimeTicks: " << parent->SynchTimeTicks  << std::endl;
+
+    count_steps = 0;
+  }
+  count_steps++;
+#endif
   
+
   parent->schedule(synchEvent, curTick() + parent->SynchTimeTicks);
 }
 
@@ -289,6 +322,94 @@ COSSIMEtherLink::Link::transmit(EthPacketPtr pkt) //TRANSMIT THE PACKET TO OTHER
     return true;
 }
 
+//COSSIM-V
+// Implement the m5 start_sync 10 pseudo-instruction
+void
+COSSIMEtherLink::Link::triggerFromGuest2(uint64_t val)
+{
+
+    std::cout << "[COSSIMEtherLink::Link] Triggered with value: " << val << std::endl;
+
+    std::cout << "[COSSIMEtherLink::Link] parent->SynchTimeTicks: " << parent->SynchTimeTicks << std::endl;
+
+#ifdef START_SYNC_ENABLE
+    if (!synchEvent.scheduled()){
+      parent->schedule(synchEvent, curTick() + parent->SynchTimeTicks);
+    }
+
+    if (!RxdoneEvent.scheduled()){
+        parent->schedule(RxdoneEvent, curTick() + parent->ReceivePacketTicks);
+    }
+
+    HLAStartSyncRequest tmp;
+    tmp.type         = WRITE;
+    tmp.synch_enable = true;
+    tmp.start_time   = (uint64_t) curTick(); //get the curTick from gem5
+    tmp.synch_time   = val * 1000000; //m5 start_sync argument (not used for now). The multiply with 1000000 is for us to ticks conversion
+
+    parent->SynchTimeTicks = tmp.synch_time;
+    parent->ReceivePacketTicks = tmp.synch_time;
+
+    parent->NodeHLA->RequestFunction2(tmp);
+#endif
+}
+
+//COSSIM-V
+void
+COSSIMEtherLink::triggerFromGuest(uint64_t val)
+{
+
+    std::cout << "[COSSIMEtherLink] Triggered with value: " << val << std::endl;
+
+    if (global_cossim_link && global_cossim_link->link) {
+        global_cossim_link->link->triggerFromGuest2(val);
+    }
+    else{
+      std::cout << "Not in COSSIM environment! Please use m5 start_sync command only inside COSSIM, not standalone!" << std::endl;
+    }
+
+}
+
+
+//COSSIM-V
+// Implement the m5 update_sync 10 pseudo-instruction
+void
+COSSIMEtherLink::Link::triggerUpdateFromGuest2(uint64_t val)
+{
+
+    std::cout << "[COSSIMEtherLink::Link] Triggered Update with value: " << val << std::endl;
+
+#ifdef START_SYNC_ENABLE
+    if(parent->nodeNumber == 0){
+      HLAStartSyncRequest tmp;
+      tmp.type         = WRITE;
+      tmp.synch_enable = true;
+      tmp.start_time   = (uint64_t) curTick(); //get the curTick from gem5
+      tmp.synch_time   = val * 1000000; //m5 update_sync argument. The multiply with 1000000 is for us to ticks conversion
+
+      parent->NodeHLA->RequestFunction2(tmp);
+    }
+    else{
+      panic("The m5 update_sync pseudo-instruction must be called only from GEM5 node 0!\n");
+    }
+#endif
+}
+
+//COSSIM-V
+void
+COSSIMEtherLink::triggerUpdateFromGuest(uint64_t val)
+{
+
+    std::cout << "[COSSIMEtherLink] Triggered Update with value: " << val << std::endl;
+
+    if (global_cossim_link && global_cossim_link->link) {
+        global_cossim_link->link->triggerUpdateFromGuest2(val);
+    }
+    else{
+      std::cout << "Not in COSSIM environment! Please use m5 update_sync command only inside COSSIM, not standalone!" << std::endl;
+    }
+
+}
 
 void 
 COSSIMEtherLink::TimeConversion(const Params &p){

@@ -71,6 +71,8 @@
 #include "sim/stats.hh"
 #include "sim/system.hh"
 
+#include "dev/net/COSSIMetherlink.hh" // COSSIM-V
+
 namespace gem5
 {
 
@@ -102,6 +104,28 @@ const std::string DIST_RANK = "dist-rank";
 const std::string DIST_SIZE = "dist-size";
 
 } // anonymous namespace
+
+/* COSSIM-V  */
+void
+startSync(ThreadContext *tc, uint64_t val)
+{
+    DPRINTF(PseudoInst, "pseudo_inst::startSync(%i)\n", val);
+    printf("\n%ld\n", val);
+   // Declare the functionality
+
+    COSSIMEtherLink::triggerFromGuest(val);
+}
+
+void
+updateSync(ThreadContext *tc, uint64_t val)
+{
+    DPRINTF(PseudoInst, "pseudo_inst::updateSync(%i)\n", val);
+    printf("\n%ld\n", val);
+   // Declare the functionality
+
+    COSSIMEtherLink::triggerUpdateFromGuest(val);
+}
+/* END COSSIM-V  */
 
 void
 arm(ThreadContext *tc)

@@ -50,6 +50,8 @@
 #ifndef __DEV_COSSIM_ETHERLINK_HH__
 #define __DEV_COSSIM_ETHERLINK_HH__
 
+#define START_SYNC_ENABLE
+
 #include "HLA_GEM5.hh"
 
 #include <queue>
@@ -75,6 +77,9 @@ class COSSIMEtherLink : public SimObject
     HLA_GEM5 * NodeHLA;
     
     HLA_GEM5 * HLAGlobalSynch;
+
+    double SynchTimeTicks; 	//! SynchTimeTicks are the ticks in which the simulator node will be synchronized !//
+    double ReceivePacketTicks;	//! ReceivePacketTicks are the ticks in which the simulator node can receive packets !//
     
   protected:
     class Interface;
@@ -82,8 +87,6 @@ class COSSIMEtherLink : public SimObject
     int nodeNumber;
     
     double SystemClockTicks;    //! SystemClockTicks is the conversion of System frequency !//
-    double SynchTimeTicks; 	//! SynchTimeTicks are the ticks in which the simulator node will be synchronized !//
-    double ReceivePacketTicks;	//! ReceivePacketTicks are the ticks in which the simulator node can receive packets !//
         
     int TotalNodes;
 
@@ -111,18 +114,18 @@ class COSSIMEtherLink : public SimObject
          * Transfer is complete
          */
         EthPacketPtr packet;
-        
-        
+
+
         void txDone(); //! Send Packet Function !//
         EventFunctionWrapper doneEvent;
-        
-        
+
+
         void rxDone(); //! Receive Packet Function !//
         EventFunctionWrapper RxdoneEvent;
-        
+
         void Synch(); //! Global Synchronization Function !//
         EventFunctionWrapper synchEvent;
-        
+
 
       public:
         Link(const std::string &name, COSSIMEtherLink *p, int num,
@@ -136,6 +139,11 @@ class COSSIMEtherLink : public SimObject
 
         void setTxInt(Interface *i) { assert(!txint); txint = i; }
         void setRxInt(Interface *i) { assert(!rxint); rxint = i; }
+
+
+        void triggerFromGuest2(uint64_t val);       // COSSIM-V
+        void triggerUpdateFromGuest2(uint64_t val); // COSSIM-V
+        uint64_t count_steps;
 
     };
 
@@ -167,6 +175,9 @@ class COSSIMEtherLink : public SimObject
     
     void TimeConversion(const Params &p);
     void closeHLA();
+
+    static void triggerFromGuest(uint64_t val); // COSSIM-V
+    static void triggerUpdateFromGuest(uint64_t val); // COSSIM-V
 
 };
 

@@ -83,6 +83,11 @@ operator<<(std::ostream& os, const GuestAddr addr)
     return os << addr.addr;
 }
 
+/* COSSIM-V  */
+void startSync(ThreadContext *tc, uint64_t val);
+void updateSync(ThreadContext *tc, uint64_t val);
+/* END COSSIM-V  */
+
 void arm(ThreadContext *tc);
 void quiesce(ThreadContext *tc);
 void quiesceSkip(ThreadContext *tc);
@@ -234,8 +239,16 @@ pseudoInstWork(ThreadContext *tc, uint8_t func, uint64_t &result)
         return true;
 
       case M5OP_RESERVED1:
-      case M5OP_RESERVED2:
-      case M5OP_RESERVED3:
+/* COSSIM-V  */
+      //case M5OP_RESERVED2:
+      case M5OP_START_SYNC:
+        invokeSimcall<ABI>(tc, startSync);
+        return true;
+      //case M5OP_RESERVED3:
+      case M5OP_UPDATE_SYNC:
+        invokeSimcall<ABI>(tc, updateSync);
+        return true;
+/* END COSSIM-V  */
       case M5OP_RESERVED4:
       case M5OP_RESERVED5:
         warn("Unimplemented m5 op (%#x)\n", func);

@@ -49,16 +49,19 @@
 #define TCP_PORT 60401
 #define CPT_TCP_PORT 60402
 #define APOLLON_TCP_PORT 60403
+#define START_SYNC_PORT 60404
 
 pthread_t tid[3*MAX_CONNECTIONS];
 
 pthread_mutex_t lock1;
 pthread_mutex_t lock2;
 pthread_mutex_t lock3;
+pthread_mutex_t lock4;
 
 int listenfd  = 0;
 int listenfd2 = 0;
 int listenfd3 = 0;
+int listenfd4 = 0;
 
 typedef struct HLAInitializationRequests{
  int type;
@@ -92,8 +95,28 @@ typedef struct CptServerElements{
   uint32_t TotalNodes;
 }CptServerElement;
 
+
+/* COSSIM-V */
+typedef struct HLAStartSyncRequests{
+ int type;
+ bool synch_enable;
+ double start_time; //get the curTick from gem5
+ uint64_t synch_time; //m5 start_sync argument (not used for now)
+}HLAStartSyncRequest;
+
+typedef struct ServerStartSync{
+ bool synch_enable;
+ double start_time; //get the curTick from gem5
+ uint64_t synch_time; //m5 start_sync argument (not used for now)
+}ServerStartSyncElement;
+
+ServerStartSyncElement starSynchElem;
+/* END COSSIM-V */
+
 std::deque<ServerElement> aDeque;
 std::deque<CptServerElement> CptaDeque;
+
+
 
 bool ExitVar;
 
@@ -198,6 +221,129 @@ void* HandleFunction(void *arg){
   
   return 0;
 }
+
+/* COSSIM-V */
+void* StartSynchHandleFunction(void *arg){
+  int *listenfdPtr = (int*)arg;
+  int listenfd = *listenfdPtr;
+
+  int sum = 0, n;
+  //bool ret = false;
+  HLAStartSyncRequest ret;
+  while(1)
+    {
+
+        int connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+
+	HLAStartSyncRequest rqst;
+	//ServerElement elem;
+	n = read(connfd, (void *) &rqst, sizeof(rqst));
+	if(n < 0)
+	  printf("\n Request error \n");
+
+	switch (rqst.type) {
+	case CREATE:
+	  printf("Server Request: type: CREATE_START_SYNCH_ELEM\n");
+// 	  strcpy(elem.name, rqst.name);
+// 	  elem.array = (bool *) malloc(sizeof(rqst.node));
+// 	  for(int i=0;i<rqst.node;i++){
+// 	    elem.array[i] = false;
+// 	  }
+	  pthread_mutex_lock(&lock4);
+	  starSynchElem.synch_enable = false;
+	  starSynchElem.start_time = 0;
+	  starSynchElem.synch_time = 0;
+	  //aDeque.push_back(elem);
+	  pthread_mutex_unlock(&lock4);
+
+	  ret.synch_enable = starSynchElem.synch_enable;
+	  ret.start_time   = starSynchElem.start_time;
+	  ret.synch_time   = starSynchElem.synch_time;
+	  break;
+// 	case REMOVE:
+// 	  printf("Server Request: type: REMOVE | name: %s | node: %d\n", rqst.name, rqst.node);
+// 	  pthread_mutex_lock(&lock1);
+// 	  for(int i=0;i<aDeque.size();i++){
+// 	    elem = aDeque[i];
+// 	    if(strcmp(elem.name,rqst.name)==0){
+// 	      aDeque.erase (aDeque.begin()+i);
+// 	      break;
+// 	    }
+// 	  }
+// 	  pthread_mutex_unlock(&lock1);
+// 	  ret = true;
+// 	  break;
+	case WRITE:
+	  printf("Server Request: type: WRITE | start_time: %f | synch_time: %ld\n", rqst.start_time, rqst.synch_time);
+	  pthread_mutex_lock(&lock4);
+	  if(starSynchElem.synch_enable == false){
+		starSynchElem.synch_enable = true;
+		starSynchElem.start_time = (double)rqst.start_time/(double)1000000000000;
+	  }
+	  starSynchElem.synch_time = rqst.synch_time;
+// 	  for(int i=0;i<aDeque.size();i++){
+// 	    elem = aDeque[i];
+// 	    if(strcmp(elem.name,rqst.name)==0)
+// 	      break;
+// 	  }
+// 	  elem.array[rqst.node] = true;
+	  pthread_mutex_unlock(&lock4);
+	  ret.synch_enable = starSynchElem.synch_enable;
+	  ret.start_time   = starSynchElem.start_time;
+	  ret.synch_time   = starSynchElem.synch_time;
+	  break;
+	case READ:
+	  printf("Server Request: type: READ | synch_enable: %d start_time: %f | synch_time: %ld\n", starSynchElem.synch_enable ,starSynchElem.start_time, starSynchElem.synch_time);
+	  pthread_mutex_lock(&lock4);
+
+// 	  for(int i=0;i<aDeque.size();i++){
+// 	    elem = aDeque[i];
+// 	    if(strcmp(elem.name,rqst.name)==0)
+// 	      break;
+// 	  }
+// 	  ret = elem.array[rqst.node];
+	  ret.synch_enable = starSynchElem.synch_enable;
+	  ret.start_time   = starSynchElem.start_time;
+	  ret.synch_time   = starSynchElem.synch_time;
+	  pthread_mutex_unlock(&lock4);
+	  break;
+// 	case READ_GLOBAL:
+// 	  printf("Server Request: type: READ_GLOBAL | name: %s | node: %d\n", rqst.name, rqst.node);
+// 	  pthread_mutex_lock(&lock1);
+// 	  for(int i=0;i<aDeque.size();i++){
+// 	    elem = aDeque[i];
+// 	    if(strcmp(elem.name,rqst.name)==0)
+// 	      break;
+// 	  }
+//
+// 	  sum = 0;
+// 	  for(int i = 0;i<rqst.node+1;i++){
+// 	    bool val = elem.array[i];
+// 	    if (val){sum++;}
+// 	  }
+// 	  pthread_mutex_unlock(&lock1);
+// 	  if(sum == (rqst.node))
+// 	    ret = true;
+// 	  else
+// 	    ret = false;
+// 	  break;
+	case CLOSE_SERVER:
+	  printf("Server Request: type: CLOSE_SERVER \n");
+	  ExitVar = true;
+	  break;
+	default:
+	  printf("\n Unknown Request Type \n");
+	}
+
+        write(connfd, (const void *) &ret, sizeof(ret));
+        close(connfd);
+
+     }
+
+  return 0;
+}
+/* END COSSIM-V */
+
 
 void* CPTHandleFunction(void *arg){
   int *listenfdPtr = (int*)arg;
@@ -505,6 +651,7 @@ void intHandler(int dummy) {
     setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&truee,sizeof(int));
     setsockopt(listenfd2,SOL_SOCKET,SO_REUSEADDR,&truee,sizeof(int));
     setsockopt(listenfd3,SOL_SOCKET,SO_REUSEADDR,&truee,sizeof(int));
+	setsockopt(listenfd4,SOL_SOCKET,SO_REUSEADDR,&truee,sizeof(int));
 }
 
 
@@ -594,6 +741,33 @@ int main(int argc, char *argv[])
 	printf("\nApollon can't create thread :[%s]", strerror(err)); 
     }
     /* END Apollon Server Implementation */
+
+
+	/* Start Sync Server Implementation */
+    struct sockaddr_in serv_addr4;
+
+    listenfd4 = socket(AF_INET, SOCK_STREAM, 0);
+    memset(&serv_addr4, '0', sizeof(serv_addr4));
+
+    serv_addr4.sin_family = AF_INET;
+    serv_addr4.sin_addr.s_addr = htonl(INADDR_ANY);
+    serv_addr4.sin_port = htons(START_SYNC_PORT);
+
+    bind(listenfd4, (struct sockaddr*)&serv_addr4, sizeof(serv_addr4));
+
+    listen(listenfd4, MAX_CONNECTIONS);
+
+    if (pthread_mutex_init(&lock4, NULL) != 0){
+        printf("\n mutex4 init failed\n");
+        return 1;
+    }
+
+    for(int i=2*MAX_CONNECTIONS;i<3*MAX_CONNECTIONS;i++){
+      int err = pthread_create(&(tid[i]), NULL, &StartSynchHandleFunction, &listenfd4);
+      if (err != 0)
+	printf("\nStart Synch can't create thread :[%s]", strerror(err));
+    }
+    /* END Start Sync Server Implementation */
     
 
     while(1){
@@ -604,6 +778,7 @@ int main(int argc, char *argv[])
     pthread_mutex_destroy(&lock1);
     pthread_mutex_destroy(&lock2);
     pthread_mutex_destroy(&lock3);
+	pthread_mutex_destroy(&lock4);
     
     
 }

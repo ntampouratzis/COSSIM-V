@@ -53,6 +53,16 @@ typedef struct HLAInitializationRequests{
 }HLAInitializationRequest;
 //! --- END CERTI INITIALIZATION IP --- !//
 
+
+/* COSSIM-V */
+typedef struct HLAStartSyncRequests{
+ int type;
+ bool synch_enable;
+ double start_time; //get the curTick from gem5
+ uint64_t synch_time; //m5 start_sync argument (not used for now)
+}HLAStartSyncRequest;
+/* END COSSIM-V */
+
 class HLA_GEM5 : public NullFederateAmbassador
 {
 public:
@@ -81,6 +91,10 @@ public:
     bool RequestFunction(HLAInitializationRequest rqst);
     bool FirstConnectionWithHLAInitialization;
     //! --- END CERTI INITIALIZATION IP --- !//
+
+    //! --- Start Synch INITIALIZATION IP --- !//
+    HLAStartSyncRequest RequestFunction2(HLAStartSyncRequests rqst);
+    //! --- END Start Synch INITIALIZATION IP --- !//
 
     unsigned long ID ; // object handle
     

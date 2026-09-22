@@ -41,6 +41,8 @@ command_ccs = [
     'workbegin.cc',
     'workend.cc',
     'hypercall.cc',
+    'start_sync.cc', # COSSIM-V
+    'update_sync.cc', # COSSIM-V
 ]
 
 command_objs = list(map(env.StaticObject, command_ccs))

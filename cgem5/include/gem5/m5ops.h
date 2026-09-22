@@ -37,6 +37,11 @@ extern "C" {
 
 #include <gem5/asm/generic/m5ops.h>
 
+/* COSSIM-V  */
+void m5_start_sync(uint64_t val);
+void m5_update_sync(uint64_t val);
+/* END COSSIM-V  */
+
 void m5_arm(uint64_t address);
 void m5_quiesce(void);
 void m5_quiesce_ns(uint64_t ns);
