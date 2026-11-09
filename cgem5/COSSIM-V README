@@ -82,3 +82,9 @@ sudo cp /home/gem5/m5 /usr/local/bin
 CMDs: m5 start_sync 10
       m5 update_sync 10 (in us)
 
+
+Write (Ubuntu 24.04): sudo mount -o remount,rw /
+
+Build the app with integrated m5 sync instructions:
+cd /home/gem5/dynamic_sync
+g++ -O3 app.cpp m5op.S -I./include -o app
